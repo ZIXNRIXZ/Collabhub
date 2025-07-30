@@ -1,0 +1,36 @@
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY hub-flow-nexus/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY hub-flow-nexus/src ./src
+COPY hub-flow-nexus/public ./public
+COPY hub-flow-nexus/vite.config.ts ./
+COPY hub-flow-nexus/tsconfig*.json ./
+COPY hub-flow-nexus/tailwind.config.ts ./
+COPY hub-flow-nexus/postcss.config.js ./
+COPY hub-flow-nexus/components.json ./
+
+# Build the application
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine
+
+# Copy built files
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"] 
